@@ -1,50 +1,45 @@
 package ru.badcom.scripts.behavior;
 
-import ru.bitel.bgbilling.kernel.contract.api.common.event.ContractModifiedEvent;
-import ru.bitel.bgbilling.kernel.contract.balance.server.event.ConvergenceBalanceEvent;
+import bitel.billing.server.contract.bean.Contract;
+import bitel.billing.server.contract.bean.ContractManager;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import ru.bitel.bgbilling.kernel.container.managed.ServerContext;
-import ru.bitel.bgbilling.kernel.event.Event;
+import ru.bitel.bgbilling.kernel.contract.api.common.event.ContractModifiedEvent;
+import ru.bitel.bgbilling.kernel.event.events.ContractStatusChangedEvent;
 import ru.bitel.bgbilling.kernel.script.server.dev.EventScriptBase;
 import ru.bitel.bgbilling.server.util.Setup;
 import ru.bitel.common.sql.ConnectionSet;
-import java.sql.*;
-import java.util.Date;
- 
-import bitel.billing.server.contract.bean.*;
- 
-public class groupByStatus extends EventScriptBase
-{
-	@Override
-	public void onEvent( Event event, Setup setup, ConnectionSet connectionSet )
-		throws Exception
-	{
-		Connection con = connectionSet.getConnection();	
-		ContractManager cpm = new ContractManager( con );
- 
-		int cid = event.getContractId();
-		ContractStatusManager contract_status_manager = new ContractStatusManager(con);
-		ContractStatus status = contract_status_manager.getStatus(cid, new Date());
-		if (status == null)
-		{
-			return;
-		}
-		int contract_status = status.getStatus();
- 
-		if (contract_status == 4) 
-		{
-			cpm.addContractGroup( cid, 57 );
-		}
- 
-		if (contract_status == 6) 
-		{
-			cpm.addContractGroup( cid, 57 );
-		}
- 
-		if (contract_status == 0) 
-		{
-			cpm.deleteContractGroup( cid, 57 );
-		};
-		ServerContext context = ServerContext.get();
-		context.publishAfterCommit( new ContractModifiedEvent( 0, cid ) );
-	}
+
+import java.sql.Connection;
+import java.util.Arrays;
+import java.util.List;
+
+public class groupByStatus extends EventScriptBase<ContractStatusChangedEvent> {
+    private static final int GROUP_SUSPENDED = 57;
+    private static final List<Integer> STATUSES_SUSPEND = Arrays.asList(4, 6);
+
+    protected static final Logger logger = LogManager.getLogger(ContractStatusChangedEvent.class);
+
+    @Override
+    public void onEvent(ContractStatusChangedEvent event, Setup setup, ConnectionSet connectionSet)
+            throws Exception {
+        Connection con = connectionSet.getConnection();
+        ContractManager contractManager = new ContractManager(con);
+//        var contractLabelManager = new ContractLabelManager(con);
+        int cid = event.getContractId();
+        Contract contract = contractManager.getContractById(cid);
+        int contractStatus = contract.getStatus();
+        ServerContext context = ServerContext.get();
+
+
+        if (STATUSES_SUSPEND.contains(contractStatus)) {
+            contractManager.addContractGroup(cid, GROUP_SUSPENDED);
+        } else {
+            contractManager.deleteContractGroup(cid, GROUP_SUSPENDED);
+        }
+//        contractLabelManager.syncLabelAndGroupContract(cid);
+
+        context.publishAfterCommit(new ContractModifiedEvent(0, cid));
+    }
 }
