@@ -1,4 +1,4 @@
-package ru.badcom.scripts.behavior;
+package ru.badcom.bgbilling.events;
 
 import bitel.billing.server.contract.bean.ContractManager;
 import org.apache.log4j.LogManager;
@@ -19,7 +19,9 @@ import ru.bitel.common.model.Period;
 import ru.bitel.common.sql.ConnectionSet;
 import ru.bitel.oss.kernel.entity.common.bean.EntityAttrDate;
 
+import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -31,8 +33,8 @@ import java.util.List;
  * @author a.kosorotikov
  * @version 1.1-2022.05.20
  */
-public class tariffChanged<E extends ContractTariffUpdateEvent> extends EventScriptBase<E> {
-    protected static final Logger logger = LogManager.getLogger(tariffChanged.class);
+public class ContractTariffUpdate_SetGroups_Event<E extends ContractTariffUpdateEvent> extends EventScriptBase<E> {
+    protected static final Logger logger = LogManager.getLogger(ContractTariffUpdate_SetGroups_Event.class);
 
     // pid Даты активации договора
     private static final int PARAM_ID_DATE = 7;
@@ -58,7 +60,7 @@ public class tariffChanged<E extends ContractTariffUpdateEvent> extends EventScr
     private ContractLabelManager contractLabelManager;
     private ContractTariffDao contractTariffDao;
     private ContractTariff tariff;
-    private ContractTariffGroup tariffGroup;
+    private ContractTariffGroup contractTariffGroup;
     private EntityAttrDate dateParameter;
     private int planId;
     private Period tariffPeriod;
@@ -84,39 +86,44 @@ public class tariffChanged<E extends ContractTariffUpdateEvent> extends EventScr
         tariffPeriod = tariff.getPeriod();
 
         // get tariff group ID from tariff if not default
-        int tariffGroupId;
-        int tariffGroupIdFromTariff = tariff.getTariffGroupId();
-        if (tariffGroupIdFromTariff == -1) {
-            tariffGroupId = tariffGroupDao.list(cid, null).stream()
-                    .map(ContractTariffGroup::getTariffGroupId)
-                    .findFirst().orElse(0);
+        int contractTariffGroupId = tariffGroupDao.list(cid, null).stream()
+                .map(ContractTariffGroup::getTariffGroupId).findFirst().orElse(0);
+        int givenTariffGroupId = tariff.getTariffGroupId();
+        int newContractTariffGroupId;
+        // if given group (default | none) leave as is
+        if (Arrays.asList(-1, 0).contains(givenTariffGroupId)) {
+            newContractTariffGroupId = contractTariffGroupId;
         } else {
-            tariffGroupId = tariffGroupIdFromTariff;
+            newContractTariffGroupId = givenTariffGroupId;
         }
 
-        // get NEW|ACTIVATED tariff groups
         tariffSwitch = TARIFF_SWITCHES.stream()
-                .filter(sw -> sw.contains(tariffGroupId))
-                .findFirst().orElse(Arrays.asList(tariffGroupId, tariffGroupId));
-        tariffGroup = new ContractTariffGroup();
-        tariffGroup.setContractId(cid);
-        tariffGroup.setTariffGroupId(tariffSwitch.get(1));
+                .filter(sw -> sw.contains(newContractTariffGroupId))
+                .findFirst().orElse(null);
+        if (tariffSwitch == null) {
+            tariffSwitch = Arrays.asList(contractTariffGroupId, contractTariffGroupId);
+            tariff.setTariffGroupId(givenTariffGroupId);
+        } else {
+            tariff.setTariffGroupId(-1);
+        }
+
+        contractTariffGroup = new ContractTariffGroup();
+        contractTariffGroup.setContractId(cid);
+        contractTariffGroup.setTariffGroupId(tariffSwitch.get(1));
     }
 
 
     @Override
     public void onEvent(E event, Setup setup, ConnectionSet connectionSet)
-            throws Exception {
+            throws BGException, SQLException, IllegalAccessException {
         initEventVars(event, connectionSet);
-
-        tariff.setTariffGroupId(-1);
 
         if (planId == PLAN_ID_NEW) {
             if (tariffPeriod.getDateTo() == null) {
                 contractManager.addContractGroup(cid, GROUP_ID_NEW);
                 contractManager.deleteContractGroup(cid, GROUP_ID_ACTIVATED);
                 dateParameter.setValue(null);
-                tariffGroup.setTariffGroupId(tariffSwitch.get(0));
+                contractTariffGroup.setTariffGroupId(tariffSwitch.get(0));
             } else {
                 contractManager.addContractGroup(cid, GROUP_ID_ACTIVATED);
                 contractManager.deleteContractGroup(cid, GROUP_ID_NEW);
@@ -137,14 +144,17 @@ public class tariffChanged<E extends ContractTariffUpdateEvent> extends EventScr
 
         contractTariffDao.update(tariff);
         try {
-            contractLabelManager.getClass().getMethod("syncLabelAndGroupContract", int.class)
+            ContractLabelManager.class.getMethod("syncLabelAndGroupContract", int.class)
                     .invoke(contractLabelManager, cid);
-            logger.info("Method run");
-        } catch (NoSuchMethodException ignored) {
-            logger.info("Method not found");
+            logger.warn("Method syncLabelAndGroupContract exists. No need try/catch");
+        }
+        catch (NoSuchMethodException ignore) {
+        }
+        catch (InvocationTargetException e) {
+            throw new BGException(e.getTargetException());
         }
         contractDao.updateContractParameter(cid, dateParameter);
-        tariffGroupDao.update(tariffGroup);
+        tariffGroupDao.update(contractTariffGroup);
         context.publishAfterCommit(new ContractModifiedEvent(0, cid));
     }
 }

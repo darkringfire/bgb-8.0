@@ -1,4 +1,4 @@
-package ru.badcom.scripts.behavior;
+package ru.badcom.bgbilling.events;
 
 import ru.bitel.bgbilling.kernel.container.managed.ServerContext;
 import ru.bitel.bgbilling.kernel.contract.balance.common.PaymentService;
@@ -11,9 +11,9 @@ import ru.bitel.common.sql.ConnectionSet;
 import java.math.BigDecimal;
 import java.util.Date;
 
-public class paymentBonus extends EventScriptBase<ContractCreatedEvent> {
+public class ContractCreated_PaymentBonus_Event<E extends ContractCreatedEvent> extends EventScriptBase<E> {
     @Override
-    public void onEvent(ContractCreatedEvent event, Setup setup, ConnectionSet connectionSet)
+    public void onEvent(E event, Setup setup, ConnectionSet connectionSet)
             throws Exception {
         ServerContext context = ServerContext.get();
         int cid = event.getContractId();
