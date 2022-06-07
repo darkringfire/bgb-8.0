@@ -9,20 +9,20 @@
         <!-- <item id="5" title="В подключении" /> -->
         <item id="6" title="Приостановлен по балансу" />
     </combo>
-    <date name="dt" title="Дата" default="today" />
+    <date name="repDate" title="Дата" default="today" />
     <combo 
-            name="active" 
+            name="statusIsActual"
             title="Актуальность статуса">
         <item id="0" title="Все" />
         <item id="1" title="Актуален сейчас" />
         <item id="2" title="Сменился" />
     </combo>
-    <fields>
-        <item id="title" title="Договор"/>
-        <item id="comment" title="Комментарий"/>
-        <item id="date" title="Дата отчёта"/>
-        <item id="status" title="Статус"/>
-        <item id="date1" title="Дата установки статуса"/>
-        <item id="date2" title="Дата окончания статуса"/>
-    </fields>
+<!--    <fields>-->
+<!--        <item id="title" title="Договор"/>-->
+<!--        <item id="comment" title="Комментарий"/>-->
+<!--        <item id="date" title="Дата отчёта"/>-->
+<!--        <item id="status" title="Статус"/>-->
+<!--        <item id="date1" title="Дата установки статуса"/>-->
+<!--        <item id="date2" title="Дата окончания статуса"/>-->
+<!--    </fields>-->
 </report>
