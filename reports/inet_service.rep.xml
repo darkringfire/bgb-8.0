@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report title="Отчет по услугам" type="java">
+	  <combo name="size" title="Трафик">
+    	<item id="0" title="байт/секунды"/>
+    	<item id="1" title="кБ"/>
+    	<item id="2" title="МБ"/>
+    	<item id="3" title="ГБ"/>
+  	</combo>
+	<month title="Месяц" name="month"/>
+	<fields>
+		<item id="service" title="Услуга"/>
+		<item id="amount" title="Наработка в байтах/секундах"/>
+	    <item id="account" title="Наработка в рублях"/>
+	</fields>
+</report>

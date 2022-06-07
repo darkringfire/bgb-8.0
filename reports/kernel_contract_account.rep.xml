@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	<report title="Отчет по наработке">
+		<month name="month" title="Месяц" />
+		<contractGroups name="gr" title="Группы" />
+		<services name="services" title="Услуги" />
+	</report>
+ 

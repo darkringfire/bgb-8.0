@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	<report title="Отчет Чита-Он-Лайн 1" 		params_class="bitel.billing.module.services.reports.voiceip.ReportParams_ChitaOnline_1" 		report_class="bitel.billing.server.reports.voiceip.Report_ChitaOnline_1"/>

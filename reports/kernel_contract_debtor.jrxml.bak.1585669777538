@@ -1,0 +1,868 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="kernel_contract_debtor"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Landscape"
+		 pageWidth="842"
+		 pageHeight="595"
+		 columnWidth="782"
+		 columnSpacing="0"
+		 leftMargin="30"
+		 rightMargin="30"
+		 topMargin="20"
+		 bottomMargin="20"
+		 whenNoDataType="NoPages"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<style 
+		name="Center"
+		isDefault="false"
+		hAlign="Center"
+		padding="0"
+		topPadding="1"
+		leftPadding="2"
+		bottomPadding="1"
+		rightPadding="1"
+	/>
+	<style 
+		name="border"
+		isDefault="false"
+		border="Thin"
+		borderColor="#000000"
+	/>
+	<style 
+		name="Right"
+		isDefault="false"
+		hAlign="Right"
+		topPadding="1"
+		leftPadding="1"
+		bottomPadding="1"
+		rightPadding="1"
+	/>
+
+	<parameter name="_filter" isForPrompting="false" class="bitel.billing.server.admin.reports.BGReportFilter"/>
+	<parameter name="gen_time" isForPrompting="false" class="java.lang.Long"/>
+	<queryString language="bgbs"><![CDATA[import java.sql.*;
+import java.util.*;
+import java.util.regex.*;
+import java.sql.*;
+import bitel.billing.server.util.*;
+import bitel.billing.server.contract.bean.Contract;
+import ru.bitel.common.TimeUtils;
+import ru.bitel.common.Utils;
+
+public void fillReport( con, filter, result )
+{
+	debtors = filter.getIntParam( "mode2" );
+	byPeriod = filter.getIntParam( "mode" ) == 1;
+	gorodPid = filter.getIntParam( "report.contract_debtor.gorod.pt", 0 );
+
+	month = filter.getCalendarParam( "date1" );
+	if (month == null) month = new GregorianCalendar();
+	month.set( Calendar.DATE, 1 );
+
+	if (!byPeriod)
+	{
+		filter.setCalendarParam( "date1", month );
+		filter.setCalendarParam( "date2", new GregorianCalendar() );
+	}
+
+	date1 = filter.getCalendarParam( "date1" );
+	date2 = filter.getCalendarParam( "date2" );
+
+	if ( date1==null || date2==null )
+		return;
+
+	sqlMonth = TimeUtils.convertCalendarToSqlDate( month );
+	sqlDate1 = TimeUtils.convertCalendarToSqlDate( date1 );
+	sqlDate2 = TimeUtils.convertCalendarToSqlDate( date2 );
+
+	time = System.currentTimeMillis();
+	query = result.sql( "SELECT summa1, summa1 + summa2 - summa3 - summa4 FROM contract_balance " +
+		"WHERE cid=? AND yy=$yy(date1) AND mm=$mm(date1)", filter );
+	getSum1 = con.prepareStatement( query );
+
+	query = result.sql( "SELECT summa1 + summa2 - summa3 - summa4 FROM contract_balance" +
+		" WHERE  cid=? AND (yy<$yy(date1) OR (yy=$yy(date1) AND mm<=$mm(date1)))" +
+		"  ORDER BY yy DESC, mm DESC", filter );
+	PreparedStatement getSum2 = con.prepareStatement( query );
+
+/*	query = result.sql( "SELECT SUM(summa) FROM contract_account" +
+		" WHERE  cid=? AND (yy<$yy(date1) OR (yy=$yy(date1) AND mm<=$mm(date1)))" +
+		"  ORDER BY yy DESC, mm DESC", filter );
+	getSum2 = con.prepareStatement( query );*/
+
+	getParams = con
+            .prepareStatement( "SELECT t1.val as phone, t2.val as fio, t3.address as address"
+                  + " FROM contract LEFT JOIN contract_parameter_type_1 as t1 ON contract.id=t1.cid AND t1.pid=" +
+                  filter.getIntParam( "report.contract_debtor.fio.pid", 1 ) +
+                  " LEFT JOIN contract_parameter_type_1 as t2 ON contract.id=t2.cid AND t2.pid=" +
+                  filter.getIntParam( "report.contract_debtor.phone.pid", 2 )
+                 + " LEFT JOIN contract_parameter_type_2 as t3 ON contract.id=t3.cid AND t3.pid=" +
+                  filter.getIntParam( "report.contract_debtor.address.pid", 3 ) + " WHERE contract.id=?" );
+
+	getPayment = con.prepareStatement( 
+	"SELECT SUM(summa) FROM contract_payment WHERE cid=? AND TO_DAYS(dt)>=TO_DAYS(?) AND TO_DAYS(dt)<TO_DAYS(?)" );
+	getPayment.setDate( 2, sqlMonth );
+	getPayment.setDate( 3, sqlDate1 );
+
+	getPayment2 = con.prepareStatement( 
+	"SELECT SUM(summa) FROM contract_payment WHERE cid=? AND TO_DAYS(dt)>=TO_DAYS(?) AND TO_DAYS(dt)<=TO_DAYS(?) AND pt!=" +
+          gorodPid );
+	getPayment2.setDate( 2, sqlMonth );
+	getPayment2.setDate( 3, sqlDate2 );
+
+	getPayment2g = con.prepareStatement( 
+	"SELECT SUM(summa) FROM contract_payment WHERE cid=? AND TO_DAYS(dt)>=TO_DAYS(?) AND TO_DAYS(dt)<=TO_DAYS(?) AND pt=" +
+          gorodPid );
+	getPayment2g.setDate( 2, sqlMonth );
+	getPayment2g.setDate( 3, sqlDate2 );
+
+	ps = con.prepareStatement( result.sql( "SELECT id, title," +
+	" comment, scid, sub_list FROM contract WHERE gr&$(gr)>0 ORDER BY contract.title", filter ) );
+
+	_addr = filter.getStringParam( "report.contract_debtor.address.cut" );
+	if ( _addr != null )
+	 addr = Pattern.compile( _addr );
+	else
+	 addr = null;
+
+	res = new ArrayList( 1000 );
+
+	//total_inc = 0d;
+	//total_payment = 0d;
+	//total_paymentg = 0d;
+	//total_balance = 0d;
+	
+	rs = ps.executeQuery();
+	while( rs. next() )
+	{
+		int scid = rs.getInt( 4 );
+		if( scid != Contract.IS_SUPER &&
+        	    scid != Contract.IS_INDEPENDENT ) {
+			continue;
+		}
+
+		cid = rs.getInt( 1 );
+		summa = 0f;
+		summa2 = 0f;
+		
+		getSum1.setInt( 1, cid );
+		sumRS = getSum1.executeQuery();
+
+		if ( sumRS.next() )
+		{	
+			summa = sumRS.getFloat( 1 );
+			summa2 = sumRS.getFloat( 2 );
+		}
+		else
+		{
+			getSum2.setInt( 1, cid );
+			sumRS = getSum2.executeQuery();
+			if ( sumRS.next() )
+			{
+				summa = sumRS.getFloat( 1 );
+				summa2 = summa;
+			}
+		}
+
+		payment2 = 0f;
+		payment2g = 0f;
+
+		if ( byPeriod )
+		{
+			payment = 0f;
+	
+			getPayment.setInt( 1, cid );//TODO
+			ResultSet getParamsRS = getPayment.executeQuery();
+			if (getParamsRS.next())
+				payment = getParamsRS.getFloat( 1 );
+	
+			getPayment2.setInt( 1, cid );//TODO
+			getParamsRS = getPayment2.executeQuery();
+			if (getParamsRS.next())
+				payment2 = getParamsRS.getFloat( 1 );
+
+			getPayment2g.setInt( 1, cid );//TODO
+			getParamsRS = getPayment2g.executeQuery();
+			if (getParamsRS.next())
+				payment2g = getParamsRS.getFloat( 1 );
+	
+			if ( scid == Contract.IS_SUPER )
+			{
+				String subList = rs.getString( 5 );
+				if ( Utils.notEmptyString( subList ) )
+				{
+					PreparedStatement subPayPS = con.prepareStatement( 
+						"SELECT SUM(summa) FROM contract_payment WHERE cid IN (" + subList + ") AND TO_DAYS(dt)>=TO_DAYS(?) AND TO_DAYS(dt)<TO_DAYS(?)" );
+					subPayPS.setDate( 1, sqlMonth );
+					subPayPS.setDate( 2, sqlDate1 );
+	
+					getParamsRS = subPayPS.executeQuery();
+					if (getParamsRS.next()) {
+						payment += getParamsRS.getFloat( 1 );
+					}
+
+					subPayPS.close();
+	
+					subPayPS = con.prepareStatement( 
+						"SELECT SUM(summa) FROM contract_payment WHERE cid IN (" + subList + ") AND TO_DAYS(dt)>=TO_DAYS(?) AND TO_DAYS(dt)<=TO_DAYS(?)" );
+					subPayPS.setDate( 1, sqlMonth );
+					subPayPS.setDate( 2, TimeUtils.convertCalendarToSqlDate( date2 ) );
+					getParamsRS = subPayPS.executeQuery();
+					if (getParamsRS.next()) {
+						payment2 += getParamsRS.getFloat( 1 );
+					}
+	
+					subPayPS.close();
+
+					subPayPS = con.prepareStatement( 
+						"SELECT SUM(summa) FROM contract_payment WHERE cid IN (" + subList + ") AND TO_DAYS(dt)>=TO_DAYS(?) AND TO_DAYS(dt)<=TO_DAYS(?) AND pt="
+							 + gorodPid );
+					subPayPS.setDate( 1, sqlMonth );
+					subPayPS.setDate( 2, sqlDate2 );
+					getParamsRS = subPayPS.executeQuery();
+					if (getParamsRS.next()) {
+						payment2 += payment2g;
+						payment2g += getParamsRS.getFloat( 1 );
+						payment2 -= payment2g;
+					}
+	
+					subPayPS.close();
+				}
+			}
+	
+			summa2 = summa + payment2 + payment2g;
+			summa = summa + payment;
+		}
+		else
+		{
+			getPayment2.setInt( 1, cid );//TODO
+			getParamsRS = getPayment2.executeQuery();
+			if (getParamsRS.next())
+				payment2 = getParamsRS.getFloat( 1 );
+
+			getPayment2g.setInt( 1, cid );//TODO
+			getParamsRS = getPayment2g.executeQuery();
+			if (getParamsRS.next())
+				payment2g = getParamsRS.getFloat( 1 );
+	
+			if ( scid == Contract.IS_SUPER )
+			{
+				String subList = rs.getString( 5 );
+				if ( Utils.notEmptyString( subList ) )
+				{
+					PreparedStatement subPayPS = con.prepareStatement( 
+						"SELECT SUM(summa) FROM contract_payment WHERE cid IN (" + subList + ") AND TO_DAYS(dt)>=TO_DAYS(?) AND TO_DAYS(dt)<=TO_DAYS(?)" );
+					subPayPS.setDate( 1, sqlMonth );
+					subPayPS.setDate( 2, sqlDate2 );
+					getParamsRS = subPayPS.executeQuery();
+					if (getParamsRS.next()) {
+						payment2 += getParamsRS.getFloat( 1 );
+					}
+
+					subPayPS = con.prepareStatement( 
+						"SELECT SUM(summa) FROM contract_payment WHERE cid IN (" + subList + ") AND TO_DAYS(dt)>=TO_DAYS(?) AND TO_DAYS(dt)<=TO_DAYS(?) AND pt="
+							 + gorodPid );
+					subPayPS.setDate( 1, sqlMonth );
+					subPayPS.setDate( 2, sqlDate2 );
+					getParamsRS = subPayPS.executeQuery();
+					if (getParamsRS.next()) {
+						payment2 += payment2g;
+						payment2g += getParamsRS.getFloat( 1 );
+						payment2 -= payment2g;
+					}
+	
+					subPayPS.close();
+				}
+			}
+		}
+
+		if (debtors == 1)
+		{
+			if ( summa2 >= 0 )
+				continue;
+		} else if (debtors == 2)
+		{
+			if ( summa >= 0 || summa2 < 0 )
+				continue;
+		}
+
+		map = new HashMap();
+		map.put( "title", rs.getString( 2 ) );
+		map.put( "comment", rs.getString( 3 ) );
+
+		getParams.setInt( 1, cid );
+		getParamsRS = getParams.executeQuery();
+		if( getParamsRS.next() )
+		{
+			map.put( "fio", getParamsRS.getString( 1 ) );
+			map.put( "phone", getParamsRS.getString( 2 ) );
+
+			address = getParamsRS.getString( 3 );
+			if ( addr!=null && address!=null )
+			{
+				Matcher m = addr.matcher( address );
+				if ( m.find() )
+				{
+					address = m.group( 1 );
+				}
+			}
+			map.put( "address", address );
+		}
+
+		//total_inc += summa;
+		//total_payment += payment2;
+		//total_paymentg += payment2g;
+		//total_balance += summa2;
+
+		map.put( "cid", cid );
+		map.put( "inc", summa );
+		map.put( "balance", summa2 );
+		map.put( "payment", payment2 );
+		map.put( "paymentg", payment2g );
+
+		res.add( map );
+	}
+
+	//print ("total: " + total_inc + " " + total_payment + " " + total_paymentg + " " + total_balance );
+
+	result.setDataSource( res );
+	params = new HashMap();
+	params.put("gen_time", System.currentTimeMillis()-time);
+	print (System.currentTimeMillis()-time);
+	result.setParams( params );
+}]]></queryString>
+
+	<field name="title" class="java.lang.String"/>
+	<field name="phone" class="java.lang.String"/>
+	<field name="fio" class="java.lang.String"/>
+	<field name="address" class="java.lang.String"/>
+	<field name="inc" class="java.lang.Float"/>
+	<field name="payment" class="java.lang.Float"/>
+	<field name="balance" class="java.lang.Float"/>
+	<field name="paymentg" class="java.lang.Float"/>
+	<field name="cid" class="java.lang.Integer"/>
+
+	<variable name="total_inc" class="java.lang.Double" resetType="Report" calculation="Sum">
+		<variableExpression><![CDATA[$F{inc}.doubleValue()]]></variableExpression>
+	</variable>
+	<variable name="total_payment" class="java.lang.Double" resetType="Report" calculation="Sum">
+		<variableExpression><![CDATA[$F{payment}.doubleValue()]]></variableExpression>
+	</variable>
+	<variable name="total_paymentg" class="java.lang.Double" resetType="Report" calculation="Sum">
+		<variableExpression><![CDATA[$F{paymentg}.doubleValue()]]></variableExpression>
+	</variable>
+	<variable name="total_balance" class="java.lang.Double" resetType="Report" calculation="Sum">
+		<variableExpression><![CDATA[$F{balance}.doubleValue()]]></variableExpression>
+	</variable>
+	<variable name="CNT" class="java.lang.Integer" resetType="None" incrementType="Column" calculation="Count">
+		<variableExpression><![CDATA[$V{CNT}]]></variableExpression>
+		<initialValueExpression><![CDATA[new Integer(1)]]></initialValueExpression>
+	</variable>
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="105"  isSplitAllowed="true" >
+				<staticText>
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="5"
+						width="782"
+						height="20"
+						forecolor="#000000"
+						backcolor="#FFFFFF"
+						key="element-1"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Bottom" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="arial.ttf" size="12" isBold="true" isItalic="false" isUnderline="false" isPdfEmbedded ="true" pdfEncoding ="Cp1251" isStrikeThrough="false" />
+					</textElement>
+				<text><![CDATA[Отчет по должникам]]></text>
+				</staticText>
+				<textField isStretchWithOverflow="false" pattern="Входящее сальдо на: dd.MM.yyyy" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="25"
+						width="782"
+						height="13"
+						forecolor="#000000"
+						backcolor="#FFFFFF"
+						key="element-2"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="arial.ttf" size="10" isBold="false" isItalic="false" isUnderline="false" isPdfEmbedded ="true" pdfEncoding ="Cp1251" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.util.Date"><![CDATA[$P{_filter}.getDateParam( "date1" )]]></textFieldExpression>
+				</textField>
+				<rectangle radius="0" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="65"
+						width="782"
+						height="40"
+						forecolor="#000000"
+						backcolor="#E1E1E1"
+						key="element-3"/>
+					<graphicElement stretchType="NoStretch" pen="Thin" fill="Solid" />
+				</rectangle>
+				<staticText>
+					<reportElement
+						style="Center"
+						x="35"
+						y="65"
+						width="56"
+						height="40"
+						key="staticText-15"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement>
+						<font fontName="SansSerif" pdfFontName="arial.ttf" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<text><![CDATA[Номер телефона абонента]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						style="Center"
+						x="91"
+						y="65"
+						width="68"
+						height="40"
+						key="staticText-16"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement>
+						<font pdfFontName="arial.ttf" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<text><![CDATA[Номер договора]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						style="Center"
+						x="159"
+						y="65"
+						width="170"
+						height="40"
+						key="staticText-17"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement>
+						<font pdfFontName="arial.ttf" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<text><![CDATA[Ф.И.О.
+абонента]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						style="Center"
+						x="329"
+						y="65"
+						width="231"
+						height="40"
+						key="staticText-18"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement>
+						<font pdfFontName="arial.ttf" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<text><![CDATA[Адрес установки]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						style="Center"
+						x="560"
+						y="65"
+						width="57"
+						height="40"
+						key="staticText-19"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<text><![CDATA[Входящее
+сальдо]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						style="Center"
+						x="672"
+						y="65"
+						width="55"
+						height="40"
+						key="staticText-20"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<text><![CDATA[Приход
+(ГОРОД)]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						x="727"
+						y="65"
+						width="55"
+						height="40"
+						key="staticText-21"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<text><![CDATA[Итоговое
+сальдо]]></text>
+				</staticText>
+				<textField isStretchWithOverflow="false" pattern="Итоговое сальдо на: dd.MM.yyyy" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="38"
+						width="782"
+						height="13"
+						forecolor="#000000"
+						backcolor="#FFFFFF"
+						key="element-6"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="arial.ttf" size="10" isBold="false" isItalic="false" isUnderline="false" isPdfEmbedded ="true" pdfEncoding ="Cp1251" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.util.Date"><![CDATA[$P{_filter}.getDateParam( "date2" )]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement
+						style="Center"
+						x="617"
+						y="65"
+						width="55"
+						height="40"
+						key="staticText-22"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<text><![CDATA[Приход]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						style="Center"
+						x="0"
+						y="65"
+						width="35"
+						height="40"
+						key="staticText-25"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement>
+						<font fontName="SansSerif" pdfFontName="arial.ttf" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<text><![CDATA[№№]]></text>
+				</staticText>
+			</band>
+		</title>
+		<pageHeader>
+			<band height="1"  isSplitAllowed="true" >
+				<line direction="TopDown">
+					<reportElement
+						x="0"
+						y="0"
+						width="782"
+						height="0"
+						key="line-6">
+							<printWhenExpression><![CDATA[Boolean.valueOf( $V{PAGE_NUMBER}.intValue()!=1 )]]></printWhenExpression>
+						</reportElement>
+					<graphicElement stretchType="NoStretch" pen="Thin"/>
+				</line>
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="15"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" pattern="# ##0.00;-# ##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						style="Right"
+						x="617"
+						y="0"
+						width="55"
+						height="14"
+						key="textField-8"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="1" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Float"><![CDATA[$F{payment}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="35"
+						y="0"
+						width="56"
+						height="14"
+						key="textField-13"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement>
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{phone}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="91"
+						y="0"
+						width="68"
+						height="14"
+						key="textField-14"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement>
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{title}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="Reference"  hyperlinkTarget="Self" >
+					<reportElement
+						x="159"
+						y="0"
+						width="170"
+						height="14"
+						key="textField-15"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement>
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{fio}]]></textFieldExpression>
+				<hyperlinkReferenceExpression><![CDATA["bgbilling:reports://bitel.billing.module.contract.ContractEditor?" + $F{cid}]]></hyperlinkReferenceExpression>
+				<hyperlinkTooltipExpression><![CDATA["Переход к договору: " + $F{title}]]></hyperlinkTooltipExpression>
+				
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="329"
+						y="0"
+						width="231"
+						height="14"
+						key="textField-16"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement>
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{address}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="# ##0.00;-# ##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						style="Right"
+						x="560"
+						y="0"
+						width="57"
+						height="14"
+						key="textField-17"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="1" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Float"><![CDATA[$F{inc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="# ##0.00;-# ##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						style="Right"
+						x="672"
+						y="0"
+						width="55"
+						height="14"
+						key="textField-18"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="1" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Float"><![CDATA[$F{paymentg}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="# ##0.00;-# ##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						style="Right"
+						x="727"
+						y="0"
+						width="55"
+						height="14"
+						key="textField-19"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="1" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Float"><![CDATA[$F{balance}]]></textFieldExpression>
+				</textField>
+				<line direction="TopDown">
+					<reportElement
+						x="0"
+						y="14"
+						width="782"
+						height="0"
+						key="line-5"
+						positionType="FixRelativeToBottom"/>
+					<graphicElement stretchType="NoStretch" pen="Thin"/>
+				</line>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="35"
+						height="14"
+						key="textField-20"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement>
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[String.valueOf($V{CNT} + 1)]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<lastPageFooter>
+			<band height="20"  isSplitAllowed="true" >
+				<staticText>
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="9"
+						width="390"
+						height="10"
+						forecolor="#000000"
+						backcolor="#FFFFFF"
+						key="element-5"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="arial.ttf" size="6" isBold="false" isItalic="false" isUnderline="false" isPdfEmbedded ="true" pdfEncoding ="Cp1251" isStrikeThrough="false" />
+					</textElement>
+				<text><![CDATA[Документ подготовлен системой "BG-Billing" © ООО "Бител" http://www.bitel.ru ]]></text>
+				</staticText>
+			</band>
+		</lastPageFooter>
+		<summary>
+			<band height="30"  isSplitAllowed="true" >
+				<rectangle radius="0" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="16"
+						width="782"
+						height="14"
+						forecolor="#000000"
+						backcolor="#E1E1E1"
+						key="element-7"/>
+					<graphicElement stretchType="NoStretch" pen="Thin" fill="Solid" />
+				</rectangle>
+				<textField isStretchWithOverflow="false" pattern="# ##0.00;-# ##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						style="Right"
+						x="617"
+						y="16"
+						width="55"
+						height="14"
+						key="textField-9"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="1" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Double"><![CDATA[$V{total_payment}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="# ##0.00;-# ##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						style="Right"
+						x="560"
+						y="16"
+						width="57"
+						height="14"
+						key="textField-10"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="1" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Double"><![CDATA[$V{total_inc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="# ##0.00;-# ##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						style="Right"
+						x="672"
+						y="16"
+						width="55"
+						height="14"
+						key="textField-11"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="1" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Double"><![CDATA[$V{total_paymentg}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="# ##0.00;-# ##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						style="Right"
+						x="727"
+						y="16"
+						width="55"
+						height="14"
+						key="textField-12"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="1" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Right">
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Double"><![CDATA[$V{total_balance}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement
+						style="Center"
+						x="0"
+						y="16"
+						width="159"
+						height="14"
+						key="staticText-24"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Left">
+						<font fontName="SansSerif" pdfFontName="arial.ttf" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<text><![CDATA[Итого:]]></text>
+				</staticText>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Report" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						style="Right"
+						x="159"
+						y="16"
+						width="401"
+						height="14"
+						key="textField-21"
+						stretchType="RelativeToTallestObject"/>
+					<box topBorder="None" topBorderColor="#000000" topPadding="1" leftBorder="None" leftBorderColor="#000000" leftPadding="1" rightBorder="None" rightBorderColor="#000000" rightPadding="1" bottomBorder="None" bottomBorderColor="#000000" bottomPadding="1"/>
+					<textElement textAlignment="Left">
+						<font pdfFontName="arial.ttf" size="9" isPdfEmbedded ="true" pdfEncoding ="Cp1251"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[String.valueOf( $V{CNT}+1 )]]></textFieldExpression>
+				</textField>
+			</band>
+		</summary>
+</jasperReport>

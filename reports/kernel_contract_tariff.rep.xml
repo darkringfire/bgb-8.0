@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	<report title="Отчет по тарифам" 		params_class="bitel.billing.module.services.reports.ReportParams_Tariff" 		report_class="ru.bitel.bgbilling.modules.reports.server.inbuild.Report_Tariff"/>

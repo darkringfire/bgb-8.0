@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report type="java" title="Реестр транзакций" dyn_class="ru.bitel.bgbilling.modules.reports.server.report.csv.PaymasterReestrReport">
+    <period title="Период" name1="date1" name2="date2"/>
+    <fields>
+		<item id="transactionId" title="ID"/>
+		<item id="date" title="Дата"/>
+		<item id="contractTitle" title="Договор"/>
+		<item id="sum" title="Сумма"/>
+    </fields>
+</report>

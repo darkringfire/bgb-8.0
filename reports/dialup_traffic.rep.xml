@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	<report title="Отчет по услугам" 		params_class="bitel.billing.module.services.reports.dialup.ReportParams_Traffic" 		report_class="bitel.billing.server.reports.dialup.Report_Traffic"/>

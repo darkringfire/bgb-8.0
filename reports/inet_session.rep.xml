@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report title="Отчет по сессиям" type="java">
+	<textField name="session_id" title="Код сессии" />
+	<textField name="connection_id" title="Код соединения" />
+	<textField name="ip_address" title="IP-адрес" />
+	<textField name="contract_title" title="Договор" />
+	<month title="Месяц" name="month"/>
+	<fields>
+		<item id="title" title="Договор"/>
+		<item id="session_id" title="Код сессии"/>
+		<item id="connection_id" title="Код соедиенения"/>
+	    <item id="start_time" title="Время начала"/>
+	    <item id="stop_time" title="Время окончания"/>
+	    <item id="duration" title="Длительность"/>
+	    <item id="cost" title="Стоимость"/>
+	</fields>
+</report>

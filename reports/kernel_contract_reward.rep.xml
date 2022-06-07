@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	<report title="Агентский"
+		params_class="bitel.billing.module.services.reports.ReportParams_Reward"
+		report_class="ru.bitel.bgbilling.modules.reports.server.inbuild.Report_Reward"/>

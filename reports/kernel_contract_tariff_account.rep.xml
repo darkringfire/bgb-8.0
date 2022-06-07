@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report title="Наработка по тарифам">
+<!--	<period name1="date1" name2="date2"/>-->
+	<month name="month" title="Месяц"/>
+</report>

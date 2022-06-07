@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report title="Отчет по направлениям">
+	<month name="month" title="Месяц"/>
+	<textField name="prefix" title="Префикс" textBefore_="textBefore" textAfter_="textAfter"/>
+	<combo name="fc" title="Режим">
+		<item id="-1" title="Любые"/>
+		<item id="0" title="Физ. лица"/>
+		<item id="1" title="Юр. лица"/>
+	</combo>
+	
+	<contractGroups name="gr" title="Группы договоров"/>
+	<services name="services" title="Услуги"/>
+</report>

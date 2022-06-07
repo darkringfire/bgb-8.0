@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report title="Разовые услуги RSCM" doc_url="http://bgbilling.ru/v6.1/doc/ch27s09.html">		
+	<services name="services" title="Услуги" mid="4"/>
+	<monthAndDays name1="date1" name2="date2" title="Месяц и дни"/>
+</report>

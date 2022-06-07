@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report title="Акт сверки">
+	<month name="month_from" title="Месяц с"/>
+	<date name="date_to" title="Дата по"/>	
+	<contracts name="contract" title="Договор"/>
+</report>

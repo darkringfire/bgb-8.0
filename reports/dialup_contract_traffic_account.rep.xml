@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	<report title="Отчет Телекей 1" 		params_class="bitel.billing.module.services.reports.dialup.ReportParams_Telekey_1" 		report_class="bitel.billing.server.reports.dialup.Report_Telekey_1"/>

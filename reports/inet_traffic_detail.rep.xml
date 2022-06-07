@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report title="Расширенный отчет по трафикам" type="java">
+  	<combo name="size" title="Трафик">
+    	<item id="0" title="Байт"/>
+    	<item id="1" title="кБ"/>
+    	<item id="2" title="МБ"/>
+    	<item id="3" title="ГБ"/>
+  	</combo>
+	<month title="Месяц" name="month"/>
+	<contractGroups name="gr" title="Группы договоров"/>
+	<fields>
+		<item id="traffic_type" title="Тип трафика"/>
+	    <item id="amount" title="Наработка"/>
+	    <item id="contract" title="Договор"/>
+	</fields>
+</report>

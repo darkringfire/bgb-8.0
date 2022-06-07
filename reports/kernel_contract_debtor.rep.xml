@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report title="Отчет по должникам">
+	<combo name="mode" title="Режим">
+		<item id="1" title="Сальдо по периоду"/>
+		<item id="2" title="Текущий баланс"/>
+	</combo>
+	<period name1="date1" name2="date2"/>
+	<combo name="mode2" title="Вывести">
+		<item id="1" title="Должники"/>
+		<item id="2" title="Оплатившие"/>
+		<item id="3" title="Все"/>
+	</combo>
+	
+	<!--<textField name="max"/>-->
+	<contractGroups name="gr" title="Группы договоров"/>
+</report>

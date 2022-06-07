@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	<report title="Отчет по дилерам ( карточки )" 		params_class="bitel.billing.module.services.reports.card.ReportParams_Card" 		report_class="bitel.billing.server.reports.card.Report_Card"/>
