@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<report title="Текущий статус" type="java">
+<report title="Текущий статус" type="java" dyn_class="ru.badcom.bgbilling.reports.ContractStatusReport">
     <combo name="status" title="Статус">
         <item id="0" title="Активен" />
         <!-- <item id="1" title="В отключении" /> -->
