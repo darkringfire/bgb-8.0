@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report title="Договоры по населённому пункту" type="java" dyn_class="ru.badcom.bgbilling.reports.ContractsByCityReport">
+    <combo name="city" title="Населённый пункт" sql="select id, title from address_city order by title">
+        <item id="0" title="--- ВСЕ ---"/>
+        <item id="-1" title="--- ИЗ СПРАВОЧНИКА ---"/>
+        <item id="-2" title="--- НЕ ИЗ СПРАВОЧНИКА ---"/>
+    </combo>
+</report>
