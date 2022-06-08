@@ -1,2 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-	<report title="Отчет по проблемам" 		params_class="bitel.billing.module.services.reports.ReportParams_Problem" 		report_class="bitel.billing.server.reports.Report_Problem"/>
