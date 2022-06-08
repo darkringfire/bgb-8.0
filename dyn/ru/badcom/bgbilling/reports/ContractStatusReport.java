@@ -28,17 +28,9 @@ public class ContractStatusReport implements BGCSVReport.CSVFillerDataFields {
 
     @Override
     public void fillReport(Connection con, BGReportFilter filter, BGCSVReport.ReportResult result, Map<String, String> fields) throws Exception {
-        logger.info("Report by status");
-
-        filter.getReportParametersMap().forEach((k, o) -> logger.info(k + " = " + o.toString()));
-
         int statusId = filter.getIntParam("status");
         int statusIsActual = filter.getIntParam("statusIsActual");
         Date repDate = filter.getDateParam("repDate");
-
-        logger.info(statusId);
-        logger.info(statusIsActual);
-        logger.info(repDate);
 
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         String dateStr = dateFormat.format(repDate);
