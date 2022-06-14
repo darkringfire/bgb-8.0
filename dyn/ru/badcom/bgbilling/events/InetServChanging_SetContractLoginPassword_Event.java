@@ -36,8 +36,7 @@ public class InetServChanging_SetContractLoginPassword_Event<E extends InetServC
         ContractDao contractDao = new ContractDao(con, uid);
 
         // Set login parameter by inet login
-        EntityAttrText loginParameter = (EntityAttrText) contractDao.getContractParameter(cid, PARAM_ID_LOGIN);
-        loginParameter.setValue(inetServ.getLogin());
+        EntityAttrText loginParameter = new EntityAttrText(cid, PARAM_ID_LOGIN, inetServ.getLogin());
         contractDao.updateContractParameter(cid, loginParameter);
 
         // Set contract password
