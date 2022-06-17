@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<report title="Приход и наработка по населённым пунктам" type="java" dyn_class="ru.badcom.bgbilling.reports.PaymentsByCityReport">
+<report title="Приход и наработка по населённым пунктам" type="java" dyn_class="ru.badcom.bgbilling.reports.PaymentsByCity">
     <month name="from" title="Месяц с"/>
     <month name="to" title="Месяц по"/>
 </report>

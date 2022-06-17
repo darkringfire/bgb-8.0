@@ -17,8 +17,8 @@ import java.util.*;
  * @author a.kosorotikov
  * @version 1.0-2022.06.08
  */
-public class ContractsActivationReport implements BGCSVReport.CSVFillerDataFields {
-    protected static final Logger logger = LogManager.getLogger(ContractsActivationReport.class);
+public class ContractsActivation implements BGCSVReport.CSVFillerDataFields {
+    protected static final Logger logger = LogManager.getLogger(ContractsActivation.class);
 
 
     private Map<String, String> loadStatuses() {

@@ -17,8 +17,8 @@ import java.util.*;
  * @author a.kosorotikov
  * @version 1.0-2022.06.07
  */
-public class PaymentsByCityReport implements BGCSVReport.CSVFillerDataFields {
-    protected static final Logger logger = LogManager.getLogger(PaymentsByCityReport.class);
+public class PaymentsByCity implements BGCSVReport.CSVFillerDataFields {
+    protected static final Logger logger = LogManager.getLogger(PaymentsByCity.class);
 
     @Override
     public void fillReport(Connection con, BGReportFilter filter, BGCSVReport.ReportResult result, Map<String, String> fields) throws Exception {

@@ -19,8 +19,8 @@ import java.util.Map;
  * @author a.kosorotikov
  * @version 1.0-2022.06.08
  */
-public class ContractsByCityReport implements BGCSVReport.CSVFillerDataFields {
-    protected static final Logger logger = LogManager.getLogger(ContractsByCityReport.class);
+public class ContractsByCity implements BGCSVReport.CSVFillerDataFields {
+    protected static final Logger logger = LogManager.getLogger(ContractsByCity.class);
 
     @Override
     public void fillReport(Connection con, BGReportFilter filter, BGCSVReport.ReportResult result, Map<String, String> fields) throws Exception {
@@ -42,7 +42,6 @@ public class ContractsByCityReport implements BGCSVReport.CSVFillerDataFields {
         }
         PreparedStatement ps = con.prepareStatement(query);
         if (cityId > 0) {
-            //noinspection JpaQueryApiInspection
             ps.setInt(1, cityId);
         }
         ResultSet rs = ps.executeQuery();
