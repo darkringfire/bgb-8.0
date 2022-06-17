@@ -6,11 +6,13 @@ import ru.bitel.bgbilling.modules.reports.server.bean.filter.BGReportFilter;
 import ru.bitel.bgbilling.modules.reports.server.report.BGCSVReport;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Get contract list by status on given date
@@ -18,49 +20,52 @@ import java.util.*;
  * @author a.kosorotikov
  * @version 1.0-2022.06.07
  */
-public class ContractStatusReport implements BGCSVReport.CSVFillerDataFields {
+public class ContractStatus implements BGCSVReport.CSVFillerDataFields {
     int STATUS_ACTIVE = 0;
     int STATUS_SUSPENDED = 4;
     int STATUS_SUSPENDED_BY_BALANCE = 6;
 
-    protected static final Logger logger = LogManager.getLogger(ContractStatusReport.class);
+    protected static final Logger logger = LogManager.getLogger(ContractStatus.class);
 
 
     @Override
     public void fillReport(Connection con, BGReportFilter filter, BGCSVReport.ReportResult result, Map<String, String> fields) throws Exception {
         int statusId = filter.getIntParam("status");
         int statusIsActual = filter.getIntParam("statusIsActual");
-        Date repDate = filter.getDateParam("repDate");
+        Date repDate = new Date(filter.getDateParam("repDate").getTime());
 
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        String dateStr = dateFormat.format(repDate);
+//        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
         String query = "select c.id cid, c.title title, c.comment comment, cs.status status, cs.date1 date1, cs.date2 date2 " +
                 "from contract_status as cs " +
                 "left join contract as c on c.id = cs.cid " +
                 "where cs.status = ? " +
+                "and (cs.date1 is null or cs.date1 <= ?) " +
+                "and (cs.date2 is null or cs.date2 >= ?) " +
                 "and (c.date2 is null or c.date2 >= ?) ";
 
-        if (statusIsActual == 0) {
-            query +=
-                    "and cs.date1 <= ? " +
-                            "and cs.date2 is null ";
-        } else {
-            query +=
-                    "and cs.date1 <= ? " +
-                            "and cs.date2 >= ? ";
+        int ACT_ALL = 0;
+        int ACT_NOW = 1;
+        int ACT_CHANGED = 2;
+        if (statusIsActual == ACT_NOW) {
+            query += "and (cs.date2 is null or cs.date2 > now()) ";
+        } else if (statusIsActual == ACT_CHANGED) {
+            query += "and (cs.date2 is not null and cs.date2 < now()) ";
         }
         query += "order by cs.date1 ";
+
+
+        logger.info(query);
 
         PreparedStatement ps = con.prepareStatement(query);
 
         int paramCounter = 1;
-        ps.setInt(paramCounter++, statusId);
-        ps.setString(paramCounter++, dateStr);
-        ps.setString(paramCounter++, dateStr);
-        if (statusIsActual == 1) {
-            ps.setString(paramCounter, dateStr);
-        }
+        ps.setInt(paramCounter++, statusId); // cs.status
+        ps.setDate(paramCounter++, repDate); // cs.date1
+        ps.setDate(paramCounter++, repDate); // cs.date2
+        ps.setDate(paramCounter, repDate); // c.date2
+
+        logger.info(ps);
 
         ResultSet rs = ps.executeQuery();
 
@@ -92,7 +97,7 @@ public class ContractStatusReport implements BGCSVReport.CSVFillerDataFields {
             map.put("title", title);
             map.put("comment", comment);
             map.put("status", statusStr);
-            map.put("date", dateStr);
+            map.put("date", repDate.toString());
             map.put("date1", date1);
             map.put("date2", date2);
             data.add(map);
@@ -109,3 +114,4 @@ public class ContractStatusReport implements BGCSVReport.CSVFillerDataFields {
     }
 
 }
+                                                                                                                
