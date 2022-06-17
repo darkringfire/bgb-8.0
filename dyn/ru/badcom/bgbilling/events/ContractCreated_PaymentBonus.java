@@ -11,7 +11,7 @@ import ru.bitel.common.sql.ConnectionSet;
 import java.math.BigDecimal;
 import java.util.Date;
 
-public class ContractCreated_PaymentBonus_Event<E extends ContractCreatedEvent> extends EventScriptBase<E> {
+public class ContractCreated_PaymentBonus<E extends ContractCreatedEvent> extends EventScriptBase<E> {
     @Override
     public void onEvent(E event, Setup setup, ConnectionSet connectionSet)
             throws Exception {

@@ -20,8 +20,8 @@ import java.sql.SQLException;
 /**
  * При изменении сервиса Inet меняет пароль договора и параметр договора "Логин" в соответствии с сервисом
  */
-public class InetServChanging_SetContractLoginPassword_Event<E extends InetServChangingEvent> extends EventScriptBase<E>{
-    protected static final Logger logger = LogManager.getLogger(InetServChanging_SetContractLoginPassword_Event.class);
+public class InetServChanging_SetContractLoginPassword<E extends InetServChangingEvent> extends EventScriptBase<E>{
+    protected static final Logger logger = LogManager.getLogger(InetServChanging_SetContractLoginPassword.class);
     private static final int PARAM_ID_LOGIN = 12;
 
     @Override

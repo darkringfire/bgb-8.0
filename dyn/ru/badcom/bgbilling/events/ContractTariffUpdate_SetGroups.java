@@ -33,8 +33,8 @@ import java.util.List;
  * @author a.kosorotikov
  * @version 1.1-2022.05.20
  */
-public class ContractTariffUpdate_SetGroups_Event<E extends ContractTariffUpdateEvent> extends EventScriptBase<E> {
-    protected static final Logger logger = LogManager.getLogger(ContractTariffUpdate_SetGroups_Event.class);
+public class ContractTariffUpdate_SetGroups<E extends ContractTariffUpdateEvent> extends EventScriptBase<E> {
+    protected static final Logger logger = LogManager.getLogger(ContractTariffUpdate_SetGroups.class);
 
     // pid Даты активации договора
     private static final int PARAM_ID_DATE = 7;

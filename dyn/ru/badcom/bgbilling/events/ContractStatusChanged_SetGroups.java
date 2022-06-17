@@ -19,11 +19,11 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
-public class ContractStatusChanged_SetGroups_Event<E extends ContractStatusChangedEvent> extends EventScriptBase<E> {
+public class ContractStatusChanged_SetGroups<E extends ContractStatusChangedEvent> extends EventScriptBase<E> {
     private static final int GROUP_SUSPENDED = 57;
     private static final List<Integer> STATUSES_SUSPEND = Arrays.asList(4, 6);
 
-    protected static final Logger logger = LogManager.getLogger(ContractStatusChanged_SetGroups_Event.class);
+    protected static final Logger logger = LogManager.getLogger(ContractStatusChanged_SetGroups.class);
 
     @Override
     public void onEvent(E event, Setup setup, ConnectionSet connectionSet)
