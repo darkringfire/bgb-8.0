@@ -2,6 +2,7 @@ package ru.badcom.bgbilling.reports;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import ru.badcom.util.NamedParamStatement;
 import ru.bitel.bgbilling.modules.reports.server.bean.filter.BGReportFilter;
 import ru.bitel.bgbilling.modules.reports.server.report.BGCSVReport;
 
@@ -40,13 +41,14 @@ public class ContractPaymentsByCity implements BGCSVReport.CSVFillerDataFields {
         fields.put("login", "Логин##75");
         fields.put("password", "Пароль##75");
         fields.put("tariff", "Тариф##200");
-        fields.put("replen", "Пополнение##100");
+        fields.put("income", "Пополнение##100");
         fields.put("outlay", "Расход##100");
         fields.put("balance", "Баланс на конец месяца##150");
 
-        String query = "select date_format(?, '%x-%m') as month, a_c.title as city, c.id as cid, c.title, c.comment \n" +
+        NamedParamStatement statement = new NamedParamStatement();
+        statement.queryTemplate = "select date_format(:from, '%x-%m') as month, a_c.title as city, c.id as cid, c.title, c.comment \n" +
                 "     , i_serv.login, i_serv.password, c_t.title as tariff \n" +
-                "     , ifnull(c_b.summa2, 0) as replen \n" +
+                "     , ifnull(c_b.summa2, 0) as income \n" +
                 "     , ifnull(c_b.summa3, 0) as outlay \n" +
                 "     , ifnull(c_b.summa1 + c_b.summa2 - c_b.summa3, 0) as balance \n" +
                 "from contract as c \n" +
@@ -64,25 +66,22 @@ public class ContractPaymentsByCity implements BGCSVReport.CSVFillerDataFields {
                 "    from contract_tariff as j_c_t \n" +
                 "    left join tariff_plan as t_p on t_p.id = j_c_t.tpid \n" +
                 "    where " +
-                "        date1 <= ? " +
-                "        and (date2 is null or date2 >= ?) \n" +
+                "        date1 <= :to " +
+                "        and (date2 is null or date2 >= :from) \n" +
                 "    group by cid \n" +
                 "    ) as c_t on c_t.cid = c.id \n" +
                 " left join contract_balance as c_b \n" +
-                "    on c_b.cid = c.id and date(concat_ws('-', c_b.yy, c_b.mm, 1)) = ? \n" +
+                "    on c_b.cid = c.id and date(concat_ws('-', c_b.yy, c_b.mm, 1)) = :from \n" +
                 "where true \n" +
-                "    and a_c.id = ? \n" +
-                "    and (c.date2 is null or c.date2 <= ?) \n" +
+                "    and a_c.id = :cid \n" +
+                "    and (c.date2 is null or c.date2 <= :to) \n" +
                 "order by c.comment";
-        PreparedStatement ps = con.prepareStatement(query);
-        ps.setDate(1, dateFrom);
-        ps.setDate(2, dateTo);
-        ps.setDate(3, dateFrom);
-        ps.setDate(4, dateFrom);
-        ps.setInt(5, cityId);
-        ps.setDate(6, dateTo);
+        statement.params.put("from", dateFrom);
+        statement.params.put("to", dateTo);
+        statement.params.put("cid", cityId);
 
-        ResultSet rs = ps.executeQuery();
+        ResultSet rs = statement.executeQueryTemplate(con);
+
         List<Map<String, String>> data = new ArrayList<>();
         while (rs.next()) {
             HashMap<String, String> map = new HashMap<>();
