@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report title="Платежи договоров по населённому пункту" type="java" dyn_class="ru.badcom.bgbilling.reports.ContractPaymentsByCity">
+    <month name="month" title="Месяц отчёта"/>
+    <combo name="city" title="Населённый пункт" sql="select id, title from address_city order by title"/>
+</report>
