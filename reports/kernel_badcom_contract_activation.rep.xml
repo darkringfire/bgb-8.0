@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report title="Первая активация" type="java">
+    <fields>
+        <item id="act_date" title="Дата активации"/>
+        <item id="title" title="Договор"/>
+        <item id="comment" title="Комментарий"/>
+        <item id="status" title="Статус"/>
+        <item id="status_date" title="Дата установки статуса"/>
+    </fields>
+</report>
