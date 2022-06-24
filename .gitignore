@@ -10,3 +10,4 @@
 !/reports/badcom_*
 !/reports/*_badcom_*
 *.bak.*
+.bak
