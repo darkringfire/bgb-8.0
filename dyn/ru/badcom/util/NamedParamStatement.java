@@ -20,7 +20,8 @@ import java.util.regex.Pattern;
 public class NamedParamStatement {
     protected static final Logger logger = LogManager.getLogger(NamedParamStatement.class);
     public Map<String, Object> params = new HashMap<>();
-    public String queryTemplate;
+    // language=MariaDB
+    public String queryTemplate = "";
     private final Pattern pattern = Pattern.compile(":([A-z]\\w*)");
 
 
