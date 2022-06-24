@@ -8,3 +8,4 @@
 /dyn/ru/bitel/
 /reports/*
 !/reports/badcom_*
+*.bak.*
